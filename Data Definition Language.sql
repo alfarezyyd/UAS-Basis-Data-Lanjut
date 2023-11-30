@@ -11,12 +11,13 @@ CREATE TABLE faculties
 (
     name               VARCHAR(50) PRIMARY KEY NOT NULL,
     email              VARCHAR(50) UNIQUE      NOT NULL,
-    dean               CHAR(18)                NOT NULL,
+    dean               CHAR(18),
     telephone          VARCHAR(15)             NOT NULL,
-    lecturers_amount   SMALLINT                NOT NULL,
+    lecturers_amount   SMALLINT                NOT NULL DEFAULT 0,
     establishment_date DATE                    NOT NULL,
     description        TEXT
 );
+
 
 DROP TABLE IF EXISTS lecturers;
 CREATE TABLE IF NOT EXISTS lecturers
@@ -28,27 +29,28 @@ CREATE TABLE IF NOT EXISTS lecturers
     expertise       VARCHAR(255)         NOT NULL,
     telephone       VARCHAR(13)          NOT NULL,
     position        VARCHAR(50)          NOT NULL,
-    faculty_name VARCHAR(50) NOT NULL,
+    faculty_name    VARCHAR(50)          NOT NULL,
     work_experience VARCHAR(255),
     join_date       DATE                 NOT NULL,
     title           VARCHAR(50)          NOT NULL,
     last_education  VARCHAR(50)          NOT NULL,
-    CONSTRAINT fk_lecturers_faculties FOREIGN KEY (faculty_name) REFERENCES faculties(name)
+    CONSTRAINT fk_lecturers_faculties FOREIGN KEY (faculty_name) REFERENCES faculties (name)
 );
 
 ALTER TABLE faculties
-    ADD CONSTRAINT fk_faculties_lecturers FOREIGN KEY (dean) REFERENCES lecturers(nip);
+    ADD CONSTRAINT fk_faculties_lecturers FOREIGN KEY (dean) REFERENCES lecturers (nip);
 
-CREATE TYPE courses_type AS ENUM ('Required', 'Option');
 
 DROP TABLE IF EXISTS study_programs;
 CREATE TABLE IF NOT EXISTS study_programs
 (
     name            VARCHAR(50) PRIMARY KEY NOT NULL,
     manager         CHAR(18) UNIQUE         NOT NULL,
-    amount_students INT                     NOT NULL,
+    amount_students INT                     NOT NULL DEFAULT 0,
     description     TEXT
 );
+
+CREATE TYPE courses_type AS ENUM ('Compulsory', 'Elective');
 
 DROP TABLE IF EXISTS courses;
 CREATE TABLE IF NOT EXISTS courses
@@ -60,10 +62,9 @@ CREATE TABLE IF NOT EXISTS courses
     type               courses_type        NOT NULL,
     semester           SMALLINT            NOT NULL,
     prerequisite       CHAR(8),
-    lecturer           CHAR(18)            NOT NULL,
     description        TEXT,
-    CONSTRAINT fk_courses_lecturers FOREIGN KEY (lecturer) REFERENCES lecturers (nip),
-    CONSTRAINT fk_courses_study_programs FOREIGN KEY (study_program_name) REFERENCES study_programs (name)
+    CONSTRAINT fk_courses_study_programs FOREIGN KEY (study_program_name) REFERENCES study_programs (name),
+    CONSTRAINT fk_prerequisite_courses FOREIGN KEY (prerequisite) REFERENCES courses(code)
 );
 
 CREATE TABLE lecturers_courses
@@ -81,10 +82,10 @@ CREATE TABLE IF NOT EXISTS curricula
     code                    CHAR(5) PRIMARY KEY NOT NULL,
     name                    VARCHAR(50) UNIQUE  NOT NULL,
     implementation_schedule DATE                NOT NULL,
-    study_program           VARCHAR(10)         NOT NULL,
+    study_program           VARCHAR(50)         NOT NULL,
     description             TEXT,
     last_updated            DATE,
-    CONSTRAINT fk_curricula_study_programs FOREIGN KEY (study_program) REFERENCES courses (code)
+    CONSTRAINT fk_curricula_study_programs FOREIGN KEY (study_program) REFERENCES study_programs (name)
 );
 
 CREATE TABLE curricula_courses
@@ -96,8 +97,8 @@ CREATE TABLE curricula_courses
     CONSTRAINT fk_curricula_courses_course FOREIGN KEY (course_code) REFERENCES courses (code)
 );
 
-CREATE TYPE gender_enum AS ENUM ('Man', 'Woman');
-CREATE TYPE religion_enum AS ENUM ('Islam', 'Kristen', 'Hindu', 'Buddha', 'Kong Hu Chu');
+CREATE TYPE gender_enum AS ENUM ('Male', 'Female');
+CREATE TYPE religion_enum AS ENUM ('Muslim', 'Christian', 'Hindu', 'Buddhist', 'Kong Hu Chu');
 CREATE TYPE citizenship_enum AS ENUM ('WNA', 'WNI');
 
 DROP TABLE IF EXISTS people;
@@ -151,7 +152,7 @@ CREATE TABLE students
 (
     npm                 CHAR(13) PRIMARY KEY NOT NULL,
     class               VARCHAR(50)          NOT NULL,
-    study_program       VARCHAR(10)          NOT NULL,
+    study_program       VARCHAR(50)          NOT NULL,
     faculty             VARCHAR(50)          NOT NULL,
     level               level_enum           NOT NULL,
     status              status_enum          NOT NULL,
@@ -171,14 +172,14 @@ CREATE TABLE students
 CREATE TABLE students_courses
 (
     student_npm CHAR(13) NOT NULL,
-    course_code CHAR(8) NOT NULL,
+    course_code CHAR(8)  NOT NULL,
     UNIQUE (student_npm, course_code),
-    CONSTRAINT fk_students_courses_student FOREIGN KEY (student_npm) REFERENCES students(npm),
-    CONSTRAINT fk_students_courses_course FOREIGN KEY (course_code) REFERENCES courses(code)
+    CONSTRAINT fk_students_courses_student FOREIGN KEY (student_npm) REFERENCES students (npm),
+    CONSTRAINT fk_students_courses_course FOREIGN KEY (course_code) REFERENCES courses (code)
 );
 
-CREATE TYPE educational_level AS ENUM ('SD', 'SMP', 'SMA/Sederajat', 'D3', 'D4/S1', 'S2', 'S3');
-CREATE TYPE work_type AS ENUM ('Housewife', 'Private Sector Employee', 'Civil Servants');
+CREATE TYPE educational_level AS ENUM ('Elementary School', 'Junior High School', 'Senior/Vocational High School', 'Diploma 3', 'Bachelor Degree', 'Associate Degree', 'Master Degree');
+CREATE TYPE work_type AS ENUM ('Government', 'Private Sector', 'Civil Servants', 'Unemployed');
 
 CREATE TABLE parents
 (
@@ -198,9 +199,8 @@ CREATE TABLE parents
     amount_dependants        SMALLINT          NOT NULL,
     CONSTRAINT fk_parents_students FOREIGN KEY (student_npm) REFERENCES students (npm)
 );
-
-CREATE TYPE buildings_purpose AS ENUM ('Rectorate', 'Sport', 'General');
-CREATE TYPE buildings_condition AS ENUM ('Very Good', 'Good', 'Not Good');
+CREATE TYPE buildings_purpose AS ENUM ('Rectorate', 'Athletics', 'Auditorium', 'Library', 'Research', 'Residence', 'Education');
+CREATE TYPE buildings_condition AS ENUM ('Good', 'Fair', 'Not Good', 'Excellent');
 
 CREATE TABLE buildings
 (
@@ -210,12 +210,12 @@ CREATE TABLE buildings
     location            POINT               NOT NULL,
     condition           buildings_condition NOT NULL,
     floors_amount       SMALLINT            NOT NULL,
-    last_treatment_date DATE                NOT NULL
+    last_treatment_date DATE
 );
 
-CREATE TYPE room_type AS ENUM ('Lab', 'Classroom', 'Lecturer Room', 'Staff Room');
+CREATE TYPE room_type AS ENUM ('Laboratory', 'Lecturer Room', 'Staff Room', 'Study Room');
 CREATE TYPE availability_status_enum AS ENUM ('Available', 'Not Available');
-CREATE TYPE room_condition_enum AS ENUM ('Good', 'Not Good');
+CREATE TYPE room_condition_enum AS ENUM ('Good', 'Fair', 'Not Good', 'Excellent');
 
 
 CREATE TABLE rooms
