@@ -8,7 +8,7 @@ BEGIN
     UPDATE faculties SET lecturers_amount = lecturer_count WHERE name = fac_name;
 END;
 $$ LANGUAGE plpgsql;
-ß
+
 -- Membuat trigger setelah INSERT pada tabel lecturers
 CREATE OR REPLACE FUNCTION after_insert_lecturers_trigger()
 RETURNS TRIGGER AS $$
