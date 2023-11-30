@@ -6,6 +6,17 @@ SELECT *
 FROM pg_tables
 WHERE schemaname = 'public';
 
+DROP TABLE IF EXISTS faculties;
+CREATE TABLE faculties
+(
+    name               VARCHAR(50) PRIMARY KEY NOT NULL,
+    email              VARCHAR(50) UNIQUE      NOT NULL,
+    dean               CHAR(18)                NOT NULL,
+    telephone          VARCHAR(15)             NOT NULL,
+    lecturers_amount   SMALLINT                NOT NULL,
+    establishment_date DATE                    NOT NULL,
+    description        TEXT
+);
 
 DROP TABLE IF EXISTS lecturers;
 CREATE TABLE IF NOT EXISTS lecturers
@@ -17,27 +28,18 @@ CREATE TABLE IF NOT EXISTS lecturers
     expertise       VARCHAR(255)         NOT NULL,
     telephone       VARCHAR(13)          NOT NULL,
     position        VARCHAR(50)          NOT NULL,
+    faculty_name VARCHAR(50) NOT NULL,
     work_experience VARCHAR(255),
     join_date       DATE                 NOT NULL,
     title           VARCHAR(50)          NOT NULL,
-    last_education  VARCHAR(50)          NOT NULL
+    last_education  VARCHAR(50)          NOT NULL,
+    CONSTRAINT fk_lecturers_faculties FOREIGN KEY (faculty_name) REFERENCES faculties(name)
 );
+
+ALTER TABLE faculties
+    ADD CONSTRAINT fk_faculties_lecturers FOREIGN KEY (dean) REFERENCES lecturers(nip);
 
 CREATE TYPE courses_type AS ENUM ('Required', 'Option');
-
-DROP TABLE IF EXISTS courses;
-CREATE TABLE IF NOT EXISTS courses
-(
-    code         CHAR(8) PRIMARY KEY NOT NULL,
-    name         VARCHAR(50)         NOT NULL,
-    sks          SMALLINT            NOT NULL,
-    type         courses_type        NOT NULL,
-    semester     SMALLINT            NOT NULL,
-    prerequisite CHAR(8),
-    lecturer     CHAR(18)            NOT NULL,
-    description  TEXT,
-    CONSTRAINT fk_courses_lecturers FOREIGN KEY (lecturer) REFERENCES lecturers (nip)
-);
 
 DROP TABLE IF EXISTS study_programs;
 CREATE TABLE IF NOT EXISTS study_programs
@@ -46,6 +48,31 @@ CREATE TABLE IF NOT EXISTS study_programs
     manager         CHAR(18) UNIQUE         NOT NULL,
     amount_students INT                     NOT NULL,
     description     TEXT
+);
+
+DROP TABLE IF EXISTS courses;
+CREATE TABLE IF NOT EXISTS courses
+(
+    code               CHAR(8) PRIMARY KEY NOT NULL,
+    study_program_name VARCHAR(50)         NOT NULL,
+    name               VARCHAR(50)         NOT NULL,
+    sks                SMALLINT            NOT NULL,
+    type               courses_type        NOT NULL,
+    semester           SMALLINT            NOT NULL,
+    prerequisite       CHAR(8),
+    lecturer           CHAR(18)            NOT NULL,
+    description        TEXT,
+    CONSTRAINT fk_courses_lecturers FOREIGN KEY (lecturer) REFERENCES lecturers (nip),
+    CONSTRAINT fk_courses_study_programs FOREIGN KEY (study_program_name) REFERENCES study_programs (name)
+);
+
+CREATE TABLE lecturers_courses
+(
+    lecturer_nip CHAR(18) NOT NULL,
+    course_code  CHAR(8)  NOT NULL,
+    UNIQUE (lecturer_nip, course_code),
+    CONSTRAINT fk_lecturers_courses_lecturer FOREIGN KEY (lecturer_nip) REFERENCES lecturers (nip),
+    CONSTRAINT fk_lecturers_courses_course FOREIGN KEY (course_code) REFERENCES courses (code)
 );
 
 DROP TABLE IF EXISTS curricula;
@@ -58,6 +85,15 @@ CREATE TABLE IF NOT EXISTS curricula
     description             TEXT,
     last_updated            DATE,
     CONSTRAINT fk_curricula_study_programs FOREIGN KEY (study_program) REFERENCES courses (code)
+);
+
+CREATE TABLE curricula_courses
+(
+    curricula_code CHAR(5) NOT NULL,
+    course_code    CHAR(8) NOT NULL,
+    UNIQUE (curricula_code, course_code),
+    CONSTRAINT fk_curricula_courses_curricula FOREIGN KEY (curricula_code) REFERENCES curricula (code),
+    CONSTRAINT fk_curricula_courses_course FOREIGN KEY (course_code) REFERENCES courses (code)
 );
 
 CREATE TYPE gender_enum AS ENUM ('Man', 'Woman');
@@ -95,18 +131,6 @@ CREATE TABLE addresses
     CONSTRAINT fk_addresses_people FOREIGN KEY (people_id) REFERENCES people (identity_card_number)
 );
 
-DROP TABLE IF EXISTS faculties;
-CREATE TABLE faculties
-(
-    name               VARCHAR(50) PRIMARY KEY NOT NULL,
-    email              VARCHAR(50) UNIQUE      NOT NULL,
-    dean               CHAR(18)                NOT NULL,
-    telephone          VARCHAR(15)             NOT NULL,
-    lecturers_amount   SMALLINT                NOT NULL,
-    establishment_date DATE                    NOT NULL,
-    description        TEXT,
-    CONSTRAINT fk_faculties_lecturers FOREIGN KEY (dean) REFERENCES lecturers (nip)
-);
 
 DROP TABLE IF EXISTS classes;
 CREATE TABLE classes
@@ -144,25 +168,35 @@ CREATE TABLE students
     CONSTRAINT fk_students_lecturers FOREIGN KEY (academic_supervisor) REFERENCES lecturers (nip)
 );
 
-CREATE TYPE educational_level AS ENUM('SD', 'SMP', 'SMA/Sederajat', 'D3', 'D4/S1', 'S2', 'S3');
-CREATE TYPE work_type AS ENUM('Housewife', 'Private Sector Employee', 'Civil Servants');
-
-CREATE TABLE parents(
+CREATE TABLE students_courses
+(
     student_npm CHAR(13) NOT NULL,
-    family_card_number VARCHAR(20) NOT NULL,
-    father_name VARCHAR(50) NOT NULL,
-    mother_name VARCHAR(50) NOT NULL,
-    father_birth_date DATE NOT NULL,
-    mother_birth_date DATE NOT NULL,
-    average_father_income VARCHAR(50) NOT NULL,
-    avarage_mother_income VARCHAR(50) NOT NULL,
+    course_code CHAR(8) NOT NULL,
+    UNIQUE (student_npm, course_code),
+    CONSTRAINT fk_students_courses_student FOREIGN KEY (student_npm) REFERENCES students(npm),
+    CONSTRAINT fk_students_courses_course FOREIGN KEY (course_code) REFERENCES courses(code)
+);
+
+CREATE TYPE educational_level AS ENUM ('SD', 'SMP', 'SMA/Sederajat', 'D3', 'D4/S1', 'S2', 'S3');
+CREATE TYPE work_type AS ENUM ('Housewife', 'Private Sector Employee', 'Civil Servants');
+
+CREATE TABLE parents
+(
+    student_npm              CHAR(13)          NOT NULL,
+    family_card_number       VARCHAR(20)       NOT NULL,
+    father_name              VARCHAR(50)       NOT NULL,
+    mother_name              VARCHAR(50)       NOT NULL,
+    father_birth_date        DATE              NOT NULL,
+    mother_birth_date        DATE              NOT NULL,
+    average_father_income    VARCHAR(50)       NOT NULL,
+    avarage_mother_income    VARCHAR(50)       NOT NULL,
     father_educational_level educational_level NOT NULL,
     mother_educational_level educational_level NOT NULL,
-    father_work_type work_type NOT NULL,
-    mother_work_type work_type NOT NULL,
-    amount_family_numbers SMALLINT NOT NULL,
-    amount_dependants SMALLINT NOT NULL,
-    CONSTRAINT fk_parents_students FOREIGN KEY (student_npm) REFERENCES students(npm)
+    father_work_type         work_type         NOT NULL,
+    mother_work_type         work_type         NOT NULL,
+    amount_family_numbers    SMALLINT          NOT NULL,
+    amount_dependants        SMALLINT          NOT NULL,
+    CONSTRAINT fk_parents_students FOREIGN KEY (student_npm) REFERENCES students (npm)
 );
 
 CREATE TYPE buildings_purpose AS ENUM ('Rectorate', 'Sport', 'General');
@@ -229,13 +263,13 @@ CREATE TABLE presences
 DROP TABLE IF EXISTS presences_histories;
 CREATE TABLE presences_histories
 (
-    student_npm CHAR(13)        NOT NULL,
-    schedule_id SERIAL          NOT NULL,
-    location    POINT           NOT NULL,
-    time        TIMESTAMP       NOT NULL,
-    photo       OID             NOT NULL,
-    status      status_presence NOT NULL DEFAULT 'Not Present',
-    success_status BOOLEAN              NOT NULL DEFAULT TRUE,
+    student_npm    CHAR(13)        NOT NULL,
+    schedule_id    SERIAL          NOT NULL,
+    location       POINT           NOT NULL,
+    time           TIMESTAMP       NOT NULL,
+    photo          OID             NOT NULL,
+    status         status_presence NOT NULL DEFAULT 'Not Present',
+    success_status BOOLEAN         NOT NULL DEFAULT TRUE,
     UNIQUE (student_npm, schedule_id),
     CONSTRAINT fk_presences_students FOREIGN KEY (student_npm) REFERENCES students (npm),
     CONSTRAINT fk_presences_schedules FOREIGN KEY (schedule_id) REFERENCES schedules (id)
