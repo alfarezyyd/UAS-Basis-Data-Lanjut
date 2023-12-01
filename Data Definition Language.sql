@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS courses
     prerequisite       CHAR(8),
     description        TEXT,
     CONSTRAINT fk_courses_study_programs FOREIGN KEY (study_program_name) REFERENCES study_programs (name),
-    CONSTRAINT fk_prerequisite_courses FOREIGN KEY (prerequisite) REFERENCES courses(code)
+    CONSTRAINT fk_prerequisite_courses FOREIGN KEY (prerequisite) REFERENCES courses (code)
 );
 
 CREATE TABLE lecturers_courses
@@ -231,17 +231,23 @@ CREATE TABLE rooms
     CONSTRAINT fk_rooms_buildings FOREIGN KEY (building_code) REFERENCES buildings (code)
 );
 
-DROP TABLE IF EXISTS schedules;
-CREATE TABLE schedules
+CREATE TYPE learning_method_enum AS ENUM ('Online', 'Offline');
+
+DROP TABLE IF EXISTS conferences;
+CREATE TABLE conferences
 (
-    id          SERIAL PRIMARY KEY NOT NULL,
-    course_code CHAR(8)            NOT NULL,
-    room_code   CHAR(4)            NOT NULL,
-    presence_id SERIAL             NOT NULL,
-    day         DATE               NOT NULL,
-    period      TSRANGE            NOT NULL,
-    CONSTRAINT fk_schedules_courses FOREIGN KEY (course_code) REFERENCES courses (code),
-    CONSTRAINT fk_schedules_rooms FOREIGN KEY (room_code) REFERENCES rooms (code)
+    id              SERIAL PRIMARY KEY   NOT NULL,
+    course_code     CHAR(8)              NOT NULL,
+    room_code       CHAR(4)              NOT NULL,
+    class_name      VARCHAR(50)          NOT NULL,
+    day             DATE                 NOT NULL,
+    period          TSRANGE              NOT NULL,
+    agenda          VARCHAR(255)         NOT NULL,
+    study_material  VARCHAR(255)         NOT NULL,
+    learning_method learning_method_enum NOT NULL,
+    CONSTRAINT fk_conferences_courses FOREIGN KEY (course_code) REFERENCES courses (code),
+    CONSTRAINT fk_conferences_rooms FOREIGN KEY (room_code) REFERENCES rooms (code),
+    CONSTRAINT fk_conferences_classes FOREIGN KEY (class_name) REFERENCES classes (name)
 );
 
 CREATE TYPE status_presence AS ENUM ('Present', 'Not Present', 'Sick', 'Permit');
@@ -249,29 +255,88 @@ CREATE TYPE status_presence AS ENUM ('Present', 'Not Present', 'Sick', 'Permit')
 DROP TABLE IF EXISTS presences;
 CREATE TABLE presences
 (
-    student_npm CHAR(13)        NOT NULL,
-    schedule_id SERIAL          NOT NULL,
-    location    POINT           NOT NULL,
-    time        TIMESTAMP       NOT NULL,
-    photo       OID             NOT NULL,
-    status      status_presence NOT NULL DEFAULT 'Not Present',
-    UNIQUE (student_npm, schedule_id),
+    student_npm   CHAR(13)        NOT NULL,
+    conference_id SERIAL          NOT NULL,
+    location      POINT           NOT NULL,
+    time          TIMESTAMP       NOT NULL,
+    photo         OID             NOT NULL,
+    status        status_presence NOT NULL DEFAULT 'Not Present',
+    UNIQUE (student_npm, conference_id),
     CONSTRAINT fk_presences_students FOREIGN KEY (student_npm) REFERENCES students (npm),
-    CONSTRAINT fk_presences_schedules FOREIGN KEY (schedule_id) REFERENCES schedules (id)
+    CONSTRAINT fk_presences_conferences FOREIGN KEY (conference_id) REFERENCES conferences (id)
 );
 
 DROP TABLE IF EXISTS presences_histories;
 CREATE TABLE presences_histories
 (
     student_npm    CHAR(13)        NOT NULL,
-    schedule_id    SERIAL          NOT NULL,
+    conference_id  SERIAL          NOT NULL,
     location       POINT           NOT NULL,
     time           TIMESTAMP       NOT NULL,
     photo          OID             NOT NULL,
     status         status_presence NOT NULL DEFAULT 'Not Present',
-    success_status BOOLEAN         NOT NULL DEFAULT TRUE,
-    UNIQUE (student_npm, schedule_id),
+    UNIQUE (student_npm, conference_id),
     CONSTRAINT fk_presences_students FOREIGN KEY (student_npm) REFERENCES students (npm),
-    CONSTRAINT fk_presences_schedules FOREIGN KEY (schedule_id) REFERENCES schedules (id)
+    CONSTRAINT fk_presences_conferences FOREIGN KEY (conference_id) REFERENCES conferences (id)
 );
 
+CREATE TYPE quality_letters_enum AS ENUM ('A', 'A-', 'B', 'B-', 'C', 'C-', 'D');
+
+CREATE TABLE transcripts
+(
+    id                SERIAL PRIMARY KEY   NOT NULL,
+    student_npm       CHAR(18)             NOT NULL,
+    quality_letters   quality_letters_enum NOT NULL,
+    quality_figures   NUMERIC(3, 2)        NOT NULL,
+    cummulative_value NUMERIC(3, 2)        NOT NULL,
+    UNIQUE (student_npm),
+    CONSTRAINT fk_transcripts_students FOREIGN KEY (student_npm) REFERENCES students (npm)
+);
+
+
+CREATE TABLE studies_plans
+(
+    student_npm CHAR(18) NOT NULL,
+    course_code CHAR(8)  NOT NULL,
+    day         DATE     NOT NULL,
+    period      TSRANGE  NOT NULL,
+    note        TEXT,
+    UNIQUE (student_npm, course_code),
+    CONSTRAINT fk_studies_plans_students FOREIGN KEY (student_npm) REFERENCES students (npm),
+    CONSTRAINT fk_studies_plans_courses FOREIGN KEY (course_code) REFERENCES courses (code)
+);
+
+CREATE TABLE transcripts_courses
+(
+    transcript_id SERIAL  NOT NULL,
+    courses_code  CHAR(8) NOT NULL,
+    CONSTRAINT fk_transcripts_courses_transcripts FOREIGN KEY (transcript_id) REFERENCES transcripts (id),
+    CONSTRAINT fk_transcripts_courses_courses FOREIGN KEY (courses_code) REFERENCES courses (code)
+);
+
+CREATE TYPE payments_type_enum AS ENUM ('Herregistration', 'Merdeka Campus Registration', 'Diplomas and Transcripts', 'Conversion Payments', 'Intermediate Semester Payments', 'Graduation Registration', 'Thesis', 'Registration of Prospective Students', 'New Student Re-registration');
+
+CREATE TABLE payments
+(
+    id           SERIAL PRIMARY KEY NOT NULL,
+    student_npm  CHAR(18)           NOT NULL,
+    type         payments_type_enum NOT NULL,
+    time         TIMESTAMP                   DEFAULT NOW(),
+    already_paid INT                NOT NULL,
+    not_yet_paid INT                NOT NULL DEFAULT 0,
+    paid_off     BOOLEAN                     DEFAULT FALSE,
+    CONSTRAINT fk_payments_students FOREIGN KEY (student_npm) REFERENCES students (npm)
+);
+
+CREATE TABLE payments_histories
+(
+    id           SERIAL               NOT NULL,
+    student_npm          CHAR(18)             NOT NULL,
+    type         payments_type_enum   NOT NULL,
+    time         TIMESTAMP                     DEFAULT NOW(),
+    already_paid INT                  NOT NULL,
+    not_yet_paid INT                  NOT NULL DEFAULT 0,
+    paid_off     BOOLEAN                       DEFAULT FALSE,
+    CONSTRAINT fk_payments_histories_payments FOREIGN KEY (id) REFERENCES payments (id),
+    CONSTRAINT fk_payments_histories_students FOREIGN KEY (student_npm) REFERENCES students (npm)
+)

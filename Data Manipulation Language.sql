@@ -315,15 +315,15 @@ VALUES
     'Lab Equipment, Sinks'
 );
 
-INSERT INTO schedules (course_code, room_code, presence_id, day, period)
+INSERT INTO conferences (course_code, room_code, class_name, day, period, agenda, study_material, learning_method)
 VALUES
-('COURSE01', 'R001', 1, '2023-11-20', '[2023-11-20 08:00, 2023-11-20 10:00)'),
-('COURSE02', 'R002', 2, '2023-11-21', '[2023-11-21 09:00, 2023-11-21 11:00)'),
-('COURSE03', 'R003', 3, '2023-11-22', '[2023-11-22 13:00, 2023-11-22 15:00)'),
-('COURSE04', 'R004', 4, '2023-11-23', '[2023-11-23 10:00, 2023-11-23 12:00)'),
-('COURSE05', 'R005', 5, '2023-11-24', '[2023-11-24 14:00, 2023-11-24 16:00)');
+('COURSE01', 'R001', 'Class A', '2023-11-20', '[2023-11-20 08:00, 2023-11-20 10:00)', 'Introduction to Programming', 'Programming Guidebook', 'Online'),
+('COURSE02', 'R002', 'Class B', '2023-11-21', '[2023-11-21 09:00, 2023-11-21 11:00)', 'Marketing Strategies', 'Marketing Case Studies', 'Offline'),
+('COURSE03', 'R003', 'Class C', '2023-11-22', '[2023-11-22 13:00, 2023-11-22 15:00)', 'Financial Analysis', 'Financial Reports', 'Online'),
+('COURSE04', 'R004', 'Class D', '2023-11-23', '[2023-11-23 10:00, 2023-11-23 12:00)', 'Human Resources Management', 'HR Policies Handbook', 'Offline'),
+('COURSE05', 'R005', 'Class E', '2023-11-24', '[2023-11-24 14:00, 2023-11-24 16:00)', 'Graphic Design Principles', 'Design Tutorials', 'Online');
 
-INSERT INTO presences (student_npm, schedule_id, location, time, photo, status)
+INSERT INTO presences (student_npm, conference_id, location, time, photo, status)
 VALUES
 ('1234567890123', 1, POINT(37.7749, -122.4194), '2023-11-20 08:05:00', 1001, 'Present'),
 ('2345678901234', 2, POINT(40.7128, -74.0060), '2023-11-21 09:10:00', 1002, 'Present'),
@@ -331,10 +331,35 @@ VALUES
 ('4567890123456', 4, POINT(34.0522, -118.2437), '2023-11-23 10:02:00', 1004, 'Sick'),
 ('5678901234567', 5, POINT(35.6895, 139.6917), '2023-11-24 14:30:00', 1005, 'Permit');
 
-INSERT INTO presences_histories (student_npm, schedule_id, location, time, photo, status, success_status)
+INSERT INTO transcripts (student_npm, quality_letters, quality_figures, cummulative_value)
 VALUES
-('1234567890123', 1, POINT(37.7749, -122.4194), '2023-11-20 08:05:00', 1001, 'Present', true),
-('2345678901234', 2, POINT(40.7128, -74.0060), '2023-11-21 09:10:00', 1002, 'Present', true),
-('3456789012345', 3, POINT(51.5074, -0.1278), '2023-11-22 13:15:00', 1003, 'Not Present', true),
-('4567890123456', 4, POINT(34.0522, -118.2437), '2023-11-23 10:02:00', 1004, 'Sick', true),
-('5678901234567', 5, POINT(35.6895, 139.6917), '2023-11-24 14:30:00', 1005, 'Permit', true);
+('1234567890123', 'A', 3.5, 3.8),
+('2345678901234', 'B', 3.2, 3.3),
+('3456789012345', 'B-', 3.0, 3.1),
+('4567890123456', 'C', 2.5, 2.7),
+('5678901234567', 'A-', 3.5, 3.6);
+
+INSERT INTO studies_plans (student_npm, course_code, day, period, note)
+VALUES
+('1234567890123', 'COURSE01', '2023-12-01', '[2023-12-01 08:00, 2023-12-01 10:00)', 'Prepare for exam'),
+('2345678901234', 'COURSE02', '2023-12-02', '[2023-12-02 09:00, 2023-12-02 11:00)', 'Group discussion'),
+('3456789012345', 'COURSE03', '2023-12-03', '[2023-12-03 13:00, 2023-12-03 15:00)', 'Homework submission'),
+('4567890123456', 'COURSE04', '2023-12-04', '[2023-12-04 10:00, 2023-12-04 12:00)', 'Project presentation'),
+('5678901234567', 'COURSE05', '2023-12-05', '[2023-12-05 14:00, 2023-12-05 16:00)', 'Research paper discussion');
+
+INSERT INTO transcripts_courses (transcript_id, courses_code)
+VALUES
+(1, 'COURSE01'),
+(2, 'COURSE02'),
+(3, 'COURSE03'),
+(4, 'COURSE04'),
+(5, 'COURSE05');
+
+INSERT INTO payments (student_npm, type, already_paid, not_yet_paid, paid_off)
+VALUES
+('1234567890123', 'Herregistration', 1500000, 0, TRUE),
+('2345678901234', 'Diplomas and Transcripts', 2000000, 500000, FALSE),
+('3456789012345', 'Intermediate Semester Payments', 1000000, 500000, FALSE),
+('4567890123456', 'Merdeka Campus Registration', 2500000, 0, TRUE),
+('5678901234567', 'Thesis', 3000000, 0, TRUE);
+
