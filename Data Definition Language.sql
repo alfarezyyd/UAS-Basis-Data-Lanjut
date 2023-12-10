@@ -32,9 +32,46 @@ CREATE TABLE IF NOT EXISTS lecturers
     faculty_name    VARCHAR(50)          NOT NULL,
     work_experience VARCHAR(255),
     join_date       DATE                 NOT NULL,
-    title           VARCHAR(50)          NOT NULL,
     last_education  VARCHAR(50)          NOT NULL,
     CONSTRAINT fk_lecturers_faculties FOREIGN KEY (faculty_name) REFERENCES faculties (name)
+);
+
+CREATE TABLE expertises
+(
+    id   SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(255)       NOT NULL
+);
+
+CREATE TABLE lecturers_expertises
+(
+    lecturer_nip CHAR(18) NOT NULL,
+    expertise_id SERIAL   NOT NULL,
+    UNIQUE (lecturer_nip, expertise_id),
+    CONSTRAINT fk_lecturers_expertises_lecturers FOREIGN KEY (lecturer_nip) REFERENCES lecturers (nip),
+    CONSTRAINT fk_lecturers_expertises_expertises FOREIGN KEY (expertise_id) REFERENCES expertises (id)
+);
+
+CREATE TABLE position
+(
+    id   SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(255)       NOT NULL
+);
+
+
+CREATE TABLE lecturers_positions
+(
+    lecturer_nip CHAR(18) NOT NULL,
+    positions_id SERIAL   NOT NULL,
+    UNIQUE (lecturer_nip, positions_id),
+    CONSTRAINT fk_lecturers_positionss_lecturers FOREIGN KEY (lecturer_nip) REFERENCES lecturers (nip),
+    CONSTRAINT fk_lecturers_positionss_positionss FOREIGN KEY (positions_id) REFERENCES expertises (id)
+);
+
+CREATE TABLE works_experiences(
+    lecturer_nip CHAR(18) NOT NULL,
+    amount_years SMALLINT NOT NULL,
+    works_field VARCHAR(255) NOT NULL,
+    CONSTRAINT fk_works_experiences_lecturers FOREIGN KEY (lecturer_nip) REFERENCES lecturers (nip)
 );
 
 ALTER TABLE faculties
@@ -147,6 +184,7 @@ CREATE TABLE classes
 CREATE TYPE level_enum AS ENUM ('D3', 'D4', 'S1', 'S2', 'S3');
 CREATE TYPE status_enum AS ENUM ('Active', 'Non Active');
 
+/* Just for documentation
 DROP TABLE IF EXISTS students;
 CREATE TABLE students
 (
@@ -156,26 +194,80 @@ CREATE TABLE students
     faculty             VARCHAR(50)          NOT NULL,
     level               level_enum           NOT NULL,
     status              status_enum          NOT NULL,
-    class_year          INTERVAL YEAR        NOT NULL,
+    class_year          CHAR(10)        NOT NULL,
     hobby               VARCHAR(255)         NOT NULL,
     language_skill      VARCHAR(255)         NOT NULL,
     academic_supervisor CHAR(18)             NOT NULL,
     ukt_group           SMALLINT             NOT NULL,
     entry_date          DATE                 NOT NULL,
-    photo               OID                  NOT NULL,
+    photo               BYTEA                  NOT NULL,
     CONSTRAINT fk_students_classes FOREIGN KEY (class) REFERENCES classes (name),
     CONSTRAINT fk_students_study_programs FOREIGN KEY (study_program) REFERENCES study_programs (name),
     CONSTRAINT fk_students_faculties FOREIGN KEY (faculty) REFERENCES faculties (name),
     CONSTRAINT fk_students_lecturers FOREIGN KEY (academic_supervisor) REFERENCES lecturers (nip)
 );
 
+*/
+
+DROP TABLE IF EXISTS students;
+CREATE TABLE students
+(
+    npm                 CHAR(13) PRIMARY KEY NOT NULL,
+    class               VARCHAR(50)          NOT NULL,
+    study_program       VARCHAR(50)          NOT NULL,
+    faculty             VARCHAR(50)          NOT NULL,
+    level               level_enum           NOT NULL,
+    status              status_enum          NOT NULL,
+    class_year          CHAR(10)             NOT NULL,
+    academic_supervisor CHAR(18)             NOT NULL,
+    ukt_group           SMALLINT             NOT NULL,
+    entry_date          DATE                 NOT NULL,
+    photo               BYTEA                NOT NULL,
+    CONSTRAINT fk_students_classes FOREIGN KEY (class) REFERENCES classes (name),
+    CONSTRAINT fk_students_study_programs FOREIGN KEY (study_program) REFERENCES study_programs (name),
+    CONSTRAINT fk_students_faculties FOREIGN KEY (faculty) REFERENCES faculties (name),
+    CONSTRAINT fk_students_lecturers FOREIGN KEY (academic_supervisor) REFERENCES lecturers (nip)
+);
+
+CREATE TABLE hobbies
+(
+    id   SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(255)       NOT NULL
+);
+
+CREATE TABLE students_hobbies
+(
+    student_npm CHAR(13) NOT NULL,
+    hobby_id    SERIAL   NOT NULL,
+    UNIQUE (student_npm, hobby_id),
+    CONSTRAINT fk_students_hobbies_students FOREIGN KEY (student_npm) REFERENCES students (npm),
+    CONSTRAINT fk_students_hobbies_hobbies FOREIGN KEY (hobby_id) REFERENCES hobbies (id)
+);
+
+CREATE TABLE languages
+(
+    id   SERIAL PRIMARY KEY NOT NULL,
+    name VARCHAR(255)       NOT NULL
+);
+
+CREATE TABLE students_languages_skills
+(
+    student_npm CHAR(13) NOT NULL,
+    language_id SERIAL   NOT NULL,
+    UNIQUE (student_npm, language_id),
+    CONSTRAINT fk_students_languages_skills_students FOREIGN KEY (student_npm) REFERENCES students (npm),
+    CONSTRAINT fk_students_languages_skills_languages FOREIGN KEY (language_id) REFERENCES languages (id)
+);
+
 CREATE TABLE students_courses
 (
     student_npm CHAR(13) NOT NULL,
     course_code CHAR(8)  NOT NULL,
+    grade       NUMERIC(3, 2),
     UNIQUE (student_npm, course_code),
     CONSTRAINT fk_students_courses_student FOREIGN KEY (student_npm) REFERENCES students (npm),
-    CONSTRAINT fk_students_courses_course FOREIGN KEY (course_code) REFERENCES courses (code)
+    CONSTRAINT fk_students_courses_course FOREIGN KEY (course_code) REFERENCES courses (code),
+    CONSTRAINT grade_check CHECK (grade >= 0 AND grade <= 4)
 );
 
 CREATE TYPE educational_level AS ENUM ('Elementary School', 'Junior High School', 'Senior/Vocational High School', 'Diploma 3', 'Bachelor Degree', 'Associate Degree', 'Master Degree');
@@ -259,7 +351,7 @@ CREATE TABLE presences
     conference_id SERIAL          NOT NULL,
     location      POINT           NOT NULL,
     time          TIMESTAMP       NOT NULL,
-    photo         OID             NOT NULL,
+    photo         BYTEA           NOT NULL,
     status        status_presence NOT NULL DEFAULT 'Not Present',
     UNIQUE (student_npm, conference_id),
     CONSTRAINT fk_presences_students FOREIGN KEY (student_npm) REFERENCES students (npm),
@@ -269,12 +361,12 @@ CREATE TABLE presences
 DROP TABLE IF EXISTS presences_histories;
 CREATE TABLE presences_histories
 (
-    student_npm    CHAR(13)        NOT NULL,
-    conference_id  SERIAL          NOT NULL,
-    location       POINT           NOT NULL,
-    time           TIMESTAMP       NOT NULL,
-    photo          OID             NOT NULL,
-    status         status_presence NOT NULL DEFAULT 'Not Present',
+    student_npm   CHAR(13)        NOT NULL,
+    conference_id SERIAL          NOT NULL,
+    location      POINT           NOT NULL,
+    time          TIMESTAMP       NOT NULL,
+    photo         BYTEA           NOT NULL,
+    status        status_presence NOT NULL DEFAULT 'Not Present',
     UNIQUE (student_npm, conference_id),
     CONSTRAINT fk_presences_students FOREIGN KEY (student_npm) REFERENCES students (npm),
     CONSTRAINT fk_presences_conferences FOREIGN KEY (conference_id) REFERENCES conferences (id)
@@ -290,7 +382,9 @@ CREATE TABLE transcripts
     quality_figures   NUMERIC(3, 2)        NOT NULL,
     cummulative_value NUMERIC(3, 2)        NOT NULL,
     UNIQUE (student_npm),
-    CONSTRAINT fk_transcripts_students FOREIGN KEY (student_npm) REFERENCES students (npm)
+    CONSTRAINT fk_transcripts_students FOREIGN KEY (student_npm) REFERENCES students (npm),
+    CONSTRAINT quality_figures CHECK (quality_figures >= 0 AND quality_figures <= 4)
+
 );
 
 
@@ -330,13 +424,21 @@ CREATE TABLE payments
 
 CREATE TABLE payments_histories
 (
-    id           SERIAL               NOT NULL,
-    student_npm          CHAR(18)             NOT NULL,
-    type         payments_type_enum   NOT NULL,
-    time         TIMESTAMP                     DEFAULT NOW(),
-    already_paid INT                  NOT NULL,
-    not_yet_paid INT                  NOT NULL DEFAULT 0,
-    paid_off     BOOLEAN                       DEFAULT FALSE,
+    id           SERIAL             NOT NULL,
+    student_npm  CHAR(18)           NOT NULL,
+    type         payments_type_enum NOT NULL,
+    time         TIMESTAMP                   DEFAULT NOW(),
+    already_paid INT                NOT NULL,
+    not_yet_paid INT                NOT NULL DEFAULT 0,
+    paid_off     BOOLEAN                     DEFAULT FALSE,
     CONSTRAINT fk_payments_histories_payments FOREIGN KEY (id) REFERENCES payments (id),
     CONSTRAINT fk_payments_histories_students FOREIGN KEY (student_npm) REFERENCES students (npm)
-)
+);
+
+CREATE TABLE payments_recapitulations
+(
+    student_npm CHAR(18) NOT NULL,
+    total_spend INT      NOT NULL DEFAULT 0,
+    UNIQUE (student_npm),
+    CONSTRAINT fk_payments_recapitulations_students FOREIGN KEY (student_npm) REFERENCES students (npm)
+);
